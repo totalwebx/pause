@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pause App - Aptiv</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 32px 16px;
+    }
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: #020617;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      border: 1px solid #1f2937;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .subtitle {
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    label {
+      font-size: 13px;
+      color: #cbd5f5;
+      display: block;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 16px;
+      outline: none;
+    }
+    input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 1px #f97316;
+    }
+    .hint {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 11px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #f97316;
+      color: #020617;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    button:hover {
+      filter: brightness(1.05);
+    }
+    .status {
+      margin-top: 16px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+    }
+    .status.error {
+      border-color: #ef4444;
+      color: #fecaca;
+      background: #450a0a;
+    }
+    .status.success {
+      border-color: #22c55e;
+      color: #bbf7d0;
+      background: #022c22;
+    }
+    .history-title {
+      margin-top: 24px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .history-list {
+      margin-top: 8px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      background: #020617;
+      border: 1px solid #1f2937;
+    }
+    .tag {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag.green {
+      background: rgba(22, 163, 74, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(22, 163, 74, 0.6);
+    }
+    .tag.red {
+      background: rgba(220, 38, 38, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(220, 38, 38, 0.6);
+    }
+    .small {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Pause App</h1>
+    <div class="subtitle">Pointer / dépointer la pause avec le matricule (4 chiffres).</div>
+
+    <form id="pauseForm">
+      <label for="matricule">Matricule</label>
+      <input
+        id="matricule"
+        name="matricule"
+        maxlength="4"
+        autocomplete="off"
+        inputmode="numeric"
+        pattern="\\d{4}"
+        required
+      />
+      <div class="hint">Exemple : 1002</div>
+
+      <button type="submit">
+        Pointer / Revenir
+      </button>
+    </form>
+
+    <div id="status" class="status"></div>
+
+    <div class="history-title">Dernières pauses</div>
+    <div id="history" class="history-list"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("pauseForm");
+    const matriculeInput = document.getElementById("matricule");
+    const statusBox = document.getElementById("status");
+    const historyBox = document.getElementById("history");
+
+    function setStatus(message, type = "") {
+      statusBox.textContent = message || "";
+      statusBox.className = "status";
+      if (type === "error") statusBox.classList.add("error");
+      if (type === "success") statusBox.classList.add("success");
+    }
+
+    function formatTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function renderHistory(items) {
+      historyBox.innerHTML = "";
+      items.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "history-item";
+
+        const left = document.createElement("div");
+        left.innerHTML = `
+          <div><strong>${item.name}</strong> (${item.matricule})</div>
+          <div class="small">
+            ${formatTime(item.start)} → ${formatTime(item.end)}
+          </div>
+        `;
+
+        const right = document.createElement("div");
+        const tag = document.createElement("span");
+        tag.className = "tag " + (item.statusColor === "red" ? "red" : "green");
+        tag.textContent = item.durationMinutes + " min";
+        right.appendChild(tag);
+
+        div.appendChild(left);
+        div.appendChild(right);
+        historyBox.appendChild(div);
+      });
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch("/api/history");
+        if (!res.ok) return;
+        const data = await res.json();
+        renderHistory(data);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const matricule = matriculeInput.value.trim();
+
+      if (!/^\d{4}$/.test(matricule)) {
+        setStatus("Le matricule doit contenir exactement 4 chiffres.", "error");
+        return;
+      }
+
+      setStatus("Traitement en cours...");
+
+      try {
+        const res = await fetch("/api/pause", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ matricule }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(data.error || "Erreur", "error");
+          return;
+        }
+
+        if (data.status === "start") {
+          setStatus(data.message, "success");
+        } else if (data.status === "end") {
+          const color = data.over20 ? "rouge (>20 min)" : "vert (≤20 min)";
+          setStatus(
+            `${data.message} • Durée: ${data.durationMinutes} min → ${color}`,
+            "success"
+          );
+        } else {
+          setStatus("Réponse inconnue du serveur", "error");
+        }
+
+        matriculeInput.value = "";
+        loadHistory();
+      } catch (err) {
+        console.error(err);
+        setStatus("Erreur de connexion au serveur", "error");
+      }
+    });
+
+    // Charger l'historique au démarrage
+    loadHistory();
+  </script>
+</body>
+</html>
